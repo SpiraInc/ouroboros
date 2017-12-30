@@ -1,7 +1,7 @@
 //Website
 //      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
 
-// This #include statement was automatically added by the Particle IDE.
+// This #include statement was automatically added by the Particle
 #include <OneWire.h>
 
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
