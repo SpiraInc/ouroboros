@@ -1,0 +1,155 @@
+//Website
+//      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
+
+// This #include statement was automatically added by the Particle IDE.
+#include <OneWire.h>
+
+#define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
+unsigned long int avgValue;  //Store the average value of the sensor feedback
+float b;
+int buf[10],temp;
+
+
+char resultstr[256];
+int measure = 0;
+
+
+OneWire ds = OneWire(D4);
+int led = D7;                   // The on-board LED    
+unsigned long lastUpdate = 0;    
+float Temp = -100;
+
+float phValue = 0;
+
+
+void setup()
+{
+    Particle.variable("result", resultstr, STRING);
+    Serial.begin(9600);
+
+    
+    pinMode(led, OUTPUT);     // Signal LED
+    
+    //pinMode(A0, INPUT); // setup A0 as analog input
+    
+}
+
+
+void loop()
+{
+    PHfunction();
+    delay(1000);
+    Particle.publish("phValue", String(phValue, 2));
+    delay(10000);
+    //Particle.publish("avgValue", String((float)avgValue, 2));
+    //delay (10000); // Make sure you don't overload the console!  Keep above 2000 (2 seconds), also keep in mind that you have to let the probe sit for 2 minutes in the buffer solution anyway to get a correct reading.
+    temperaturefunction();
+    delay(1000);
+    Particle.publish("Temp", String(Temp, 2));
+    delay(1000);
+}
+    void PHfunction()
+    {
+    phValue = 0;
+    
+    for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
+  { 
+    buf[i]=analogRead(SensorPin);
+    delay(10);
+  }
+  for(int i=0;i<9;i++)        //sort the analog from small to large
+  {
+    for(int j=i+1;j<10;j++)
+    {
+      if(buf[i]>buf[j])
+      {
+        temp=buf[i];
+        buf[i]=buf[j];
+        buf[j]=temp;
+      }
+    }
+  }
+  avgValue=0;
+  for(int i=2;i<8;i++)      //take the average value of 6 center sample
+    avgValue+=buf[i];
+  //float phValue=(float)avgValue*5.0/4095/6; // This code is for the Arduino only to use it, uncomment this line, and comment out the next one!
+  phValue=(((float)avgValue*3.3)/2835)/6; // Works on Photon! (convert the analog into millivolt) You can tweak the middle (the 2890)number to get your measurements exact if you are calibrating with buffer solutions
+  //phValue=(((float)avgValue*3.3)/3200)/6;
+  //ADDITIONAL NOTE: I used these settings and then adjusted the rheostat on the circuit board to get the calibration perfect.
+  phValue=2.67*phValue;                      //convert the millivolt into pH value
+    
+}
+
+void temperaturefunction()
+{
+    byte i;
+    byte present = 0;
+    byte type_s;
+    byte data[12];
+    byte addr[8];
+    float celsius, fahrenheit;
+    
+    if ( !ds.search(addr)) {
+        ds.reset_search();
+        delay(250);
+        return;
+    }
+
+///*    
+    // Use to determine the addressess of the sensors connected to the Photon
+    Serial.println();
+    Serial.println("ROM =");
+    for( i = 0; i < 8; i++){
+        Serial.write(' ');
+        Serial.print(addr[i]);
+        Serial.println();
+    }
+//*/
+
+    ds.reset();
+    ds.select(addr);
+    ds.write(0x44,0);
+    delay(1000);
+    
+    present = ds.reset();
+    ds.select(addr);
+    ds.write(0xB8,0);
+    ds.write(0x00,0);
+    
+    present = ds.reset();
+    ds.select(addr);
+    ds.write(0xBE,0);
+    
+    for ( i = 0; i < 9; i++){
+        data[i] = ds.read();
+    }
+
+    int16_t raw = (data[1] << 8) | data[0];
+    byte cfg = (data[4] & 0x60);    
+    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+    if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+    if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+    // default is 12 bit resolution, 750 ms conversion time
+    celsius = (float)raw * 0.0625;
+    fahrenheit = celsius * 1.8 + 32;
+  
+    //if (addr[7] == 0x40) 
+    Temp = celsius;
+    //if (addr[7] == 0x61) Superfly = celsius;    
+    //if (addr[7] == 0xA6) Erebus = celsius;
+    //if (addr[7] == 0x23) Cronus = celsius;
+    //if (addr[7] == 0x98) Monolith = celsius;
+    //if (addr[7] == 0x5) Bender = celsius;
+
+
+//    char *Gaia = "Biggles"; // read some data
+//    float Superfly = celsius;
+
+    //digitalWrite(led, HIGH); // signal light on
+    // format your data as JSON, don't forget to escape the double quotes
+    //sprintf(resultstr, "{\"Gaia\":%f,\"Superfly\":%f,\"Erebus\":%f}", Gaia, Superfly, Erebus);
+    Serial.print(Temp);
+    delay(1000); // wait for a second
+    //digitalWrite(led, LOW);
+    } // signal light off
+
