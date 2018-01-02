@@ -1,0 +1,14 @@
+//These Webhooks listen for a Particle Photon device to publish either pH or temperature data events, and then make
+//a POST HTTP request to send this data to AWS DynamoDB.
+
+{
+    "event": "phValue", //or "Temp"
+    "url": "https://[endpoint].execute-api.us-east-1.amazonaws.com/prod/Particle-Data-Lambda",
+    "requestType": "POST",
+    "noDefaults": false,
+    "rejectUnauthorized": true,
+    "headers": {
+        "x-api-key": "[key]"
+    },
+    "json": true
+}
