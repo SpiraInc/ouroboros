@@ -6,11 +6,7 @@ The chip is being programmed in C++ using the Particle Build interface. It is cu
 
 # Obtaining Sensor Data from Particle Build
 
-<<<<<<< HEAD
-The main code for this chip is the app [`particle_master`](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every minute or so, and this data is published (made available to the Webhooks) using the following commands:
-=======
 The main code for this chip is the app [`particle_master`](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every 20 seconds or so, and this data is published (made available to the Webhooks) using the following commands:
->>>>>>> cc5f4f5927dd58cfe7d406e38ea5d19363fc9226
 
 ```
 Particle.publish("phValue", String(phValue, 2));
@@ -20,14 +16,6 @@ Particle.publish("Temp", String(Temp, 2));
  - The first parameter is the name of the event associated with the publish. Our Webhooks will listen for these two specific events in order to be triggered.  
  - The second parameter is the data value.
 
-<<<<<<< HEAD
-In order to log the device name, a variable encoding the device name must be defined, which is done by defining the data variable as follows:
-
-```
-(todo)
-```
-=======
->>>>>>> cc5f4f5927dd58cfe7d406e38ea5d19363fc9226
 
 # Exporting Data to Amazon Web Services
 
@@ -40,17 +28,7 @@ The successfully logged data can be viewed in the DynamoDB dashboard as shown be
 
 ### Creating the Lambda Function for Processing Data
 
-<<<<<<< HEAD
-The lambda function can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  The lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_.  Our lambda function is named `Particle-Data-Lambda` and settings were chosen as shown in the graphic below:
-
-The function's Role must have permission to write to DynamoDB.  To provide this permission, we created a new Role by clicking _Create a custom role_ in the _Role_ dropdown menu shown above.  This redirects to creation of an IAM Role, which was done as shown below:
-
-To add the necessary permissions, navigate to the IAM Dashboard and click _Roles -> Your new Role -> Attach policy_ and select the _AmazonDynamoDBFullAccess_ permissions policy:
-
-Now, return to creation of the lambda function and select _Choose an existing role_ in the _Role_ dropdown menu, and select the new Role.  Then click _Create function_.
-=======
 The lambda function can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  The lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_.
->>>>>>> cc5f4f5927dd58cfe7d406e38ea5d19363fc9226
 
 ### Creating the API Gateway Endpoint
 
@@ -77,43 +55,6 @@ Two Webhooks were created, one for logging temperature and one for logging pH.  
  - The URL is `https://[endpoint].execute-api.us-east-1.amazonaws.com/prod/Particle-Data-Lambda`
  - The Request Type is _POST_, the Request Format is _JSON_, and the Device is _Any_.
 
-<<<<<<< HEAD
-Click _Advanced Settings_.  
-
- - The _JSON Data_ field shows the data portion of the event JSON that will be sent to AWS.  Add the device name to this list of properties by inserting `"device": "{{PARTICLE_DEVICE_NAME}}"`.
- - In the HTTP Headers field, add a key-value pair where the key is `x-api-key` and the value is the API key.
-
-Click _Create Webhook_.
-
-
-### Testing
-
-The lambda function's console logs can be monitored by navigating to the Particle-Data-Lambda Montioring Resource and clicking _Jump to Logs_.  However, a CloudWatch Log Group will have to be created in order to receive logs.
-
-In the lambda function, you can create test functions to run the lambda function without posting data from Particle.  On the lambda function's Configuration page, go to the drop down menu next to _Test_ and click _Configure Test Events_.  
-From this we received the following error message:
-This means that the lambda function is not authorized to post data to DynamoDB.  To solve this, we realized that additional permissions were required for the lambda function's Role, and added them as explained in **Creating the Lambda Function for Processing Data**.
-
-Upon testing data, we received the following Bad Request Response:
-
-In order to investigate this response, we set up logging of the API Gateway Endpoint.  This requires creation of a new Role that gives the API Gateway permission to log to CloudWatch.  Steps for setting this up can be found [here](https://kennbrodhagen.net/2016/07/23/how-to-enable-logging-for-api-gateway/).
-
-We discovered that this was occurring because the lambda function was not returning a response in the proper format.  The API Gateway Endpoint requires a response of the form:
-
-```
-{
-    "statusCode": httpStatusCode,
-    "headers": { "headerName": "headerValue", ... },
-    "body": "{\"myKey\":\"myValue\", ...}"
-}
-```
-
-We return the status code `200`, an empty header object, and a body of stringified event data.  The response is returned using the following command:
-
-```
-context.succeed(response);
-```
-=======
 Click _Advanced Settings_.  The _JSON Data_ field shows the data portion of the event JSON that will be sent to AWS.
 
  - In the HTTP Headers field, add a key-value pair where the key is `x-api-key` and the value is the API key.
@@ -123,7 +64,6 @@ Click _Create Webhook_.
 
 The lambda function's console logs can be monitored by navigating to the Particle-Data-Lambda Montioring Resource and clicking _Jump to Logs_.
 
->>>>>>> cc5f4f5927dd58cfe7d406e38ea5d19363fc9226
 # Exporting Data to Adafruit
 
 ### Creating the feeds
