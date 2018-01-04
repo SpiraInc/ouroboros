@@ -147,5 +147,9 @@ AWS.config.credentials = new AWS.Credentials('[Access key ID]', '[Secret access 
 
 The S3 website can be tested by writing console logs in the `script.js` code, then opening the S3 website in Google Chrome (most other browsers will work as well),  and pressing _Ctrl+Shift+I_ to open developer tools.  Click the _Console_ tab to view any logs that have occurred since the web page loaded, as shown in this graphic:
 
+### Particle Photon Functions
+
+The photon uses the 'LiquidCrystal_I2C_Spark.h' and 'OneWire.h' library.
+
 License
 ----
