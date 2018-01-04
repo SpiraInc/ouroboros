@@ -1,10 +1,10 @@
 ﻿[![N|Solid](https://www.livespira.com/wp-content/uploads/2017/02/spira_logotype_Spira-Green_rgb-1.png)](https://www.livespira.com/)
 # Overview
-This guide documents the steps required to ingest time series sensor data from Particle Photon chips and post this data to the AWS database and Adafruit.io.
+This guide documents the steps required to ingest time series sensor data from Particle Photon chips, post this data to the AWS database and Adafruit.io, and create D3 visualizations of data on an S3 website.
 
-The chip is being programmed in C++ using the Particle Build interface. It is currently logging temperature and pH data, and we aim to expand to more outputs.  The current goal is to create Particle webhooks that listen to the chip's published data, then POST the data to a AWS API Gateway Endpoint where an AWS Lambda function will ingest the data and post to AWS DynamoDB. There will be another set of Particle webhooks that will POST the data to Adafruit.io to create pretty graphs. 
+The chip is being programmed in C++ using the Particle Build interface. It is currently logging temperature and pH data, and we aim to expand to more outputs.  The current goal is to create Particle webhooks that listen to the chip's published data, then POST the data to a AWS API Gateway Endpoint where an AWS Lambda function will ingest the data and post to AWS DynamoDB. An AWS S3 website will query DynamoDB and create graphs using the D3.js library.  There will also be Particle code that will POST the data to Adafruit.io to create pretty graphs. 
 
-# Obtaining Sensor Data from Particle Build
+### Obtaining sensor data from Particle Build
 
 The main code for this chip is the app [`particle_master`](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every minute or so, and this data is published (made available to the Webhooks) using the following commands:
 
@@ -22,8 +22,8 @@ In order to log the device name, a variable encoding the device name must be def
 (todo)
 ```
 
-# Exporting Data to Amazon Web Services
 
+# Exporting Data to Amazon Web Services
 
 ###  Creating the AWS Data Table
 
@@ -31,7 +31,7 @@ We will be using an AWS DynamoDB table to store our data, which has been named `
 
 The successfully logged data can be viewed in the DynamoDB dashboard as shown below:
 
-### Creating the Lambda Function for Processing Data
+### Creating the Lambda Function for processing data
 
 The lambda function can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  The lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_.  Our lambda function is named `Particle-Data-Lambda` and settings were chosen as shown in the graphic below:
 
@@ -80,7 +80,7 @@ The lambda function's console logs can be monitored by navigating to the Particl
 
 In the lambda function, you can create test functions to run the lambda function without posting data from Particle.  On the lambda function's Configuration page, go to the drop down menu next to _Test_ and click _Configure Test Events_.  
 From this we received the following error message:
-This means that the lambda function is not authorized to post data to DynamoDB.  To solve this, we realized that additional permissions were required for the lambda function's Role, and added them as explained in **Creating the Lambda Function for Processing Data**.
+This means that the lambda function is not authorized to post data to DynamoDB.  To solve this, we realized that additional permissions were required for the lambda function's Role, and added them as explained in **Creating the Lambda Function for processing data**.
 
 Upon testing data, we received the following Bad Request Response:
 
@@ -101,13 +101,51 @@ We return the status code `200`, an empty header object, and a body of stringifi
 ```
 context.succeed(response);
 ```
-# Exporting Data to Adafruit
+# Exporting Data for Visualization
 
-### Creating the feeds
+### Exporting to Adafruit
 
-### Creating the Webhooks
+To export to our Adafruit.io dashboard, we created an IFTTT applet that listens for the Particle events and then posts the data to the dashboard.
+
+This approach is limited by the fact that the IFTTT applet can only be implemented for one specific device.  Data posting could also be done through implementation in Particle Build, using Adafruit's client/server libraries. However we decided to use Adafruit as our quick and basic option, and instead will use D3 on S3 for our primary method of data visualization in the long-term.
+
+### Creating the S3 bucket
+
+The S3 bucket provides a website for which we can write code to visualize the data.  In the future, the website code can be relocated to the Spira domain.
+
+To create the S3 bucket, go to the S3 Resource and click _Create Bucket_.  The bucket is named `particle-photon-data-visualization`.  Click _Next_.
+
+ - In _Set properties_ and _Set permissions_, none of the permissions were changed from default.
+ - Once the bucket has been created, click on it in the S3 Resource, and click _Properties -> Static Website Hosting -> Use this bucket to host a website_.  Then we set the name of the file with the website code to `index.html` and an error file to `error.html`.
+
+We must upload an index file, as well as a javascript file (`script.js`) and a CSS stylesheet file (`style.css`) to the S3 bucket.  This is done without changing defaults, except for selecting _Grant public read access to this object(s)_ in the _Select Files_ step.
+
+We must also obtain credentials that allow the website's code to access our DynamoDB table.  This is done by creating an IAM User and a custom Policy that provides read permissions on our table.
+
+### Writing the website code
+
+The `index.html` code is a standard HTML document.  Note some important details:
+
+ - The header must include the AWS SDK script file, which allows us to connect and work with DynamoDB. Include the tag: 
+```
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.40.min.js"></script>
+```
+ - In order for this web page to run our javascript code, include this tag as well:
+```
+<script src="script.js"></script>
+```
+
+In `script.js`, we start by creating a connection to AWS services using the following code:
+```
+AWS.config.region = 'us-east-1'; // Region
+AWS.config.credentials = new AWS.Credentials('[Access key ID]', '[Secret access key]');
+```
+
+### Creating Visualizations with D3
 
 ### Testing
+
+The S3 website can be tested by writing console logs in the `script.js` code, then opening the S3 website in Google Chrome (most other browsers will work as well),  and pressing _Ctrl+Shift+I_ to open developer tools.  Click the _Console_ tab to view any logs that have occurred since the web page loaded, as shown in this graphic:
 
 License
 ----
