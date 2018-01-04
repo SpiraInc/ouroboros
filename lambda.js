@@ -1,15 +1,13 @@
-// TODO: alter parsing of the event object to correspond to our webhook
-//
 // This lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.
 // By Amanda Gross
 //
 // Based on a lambda function created by Nic Jansa: https://github.com/nicjansma/dht-logger/blob/master/lambda.js
 //
-console.log("hello");
 //
 // Imports
 //
 var doc = require("dynamodb-doc");
+var aws = require("aws-sdk");
 
 //
 // Constants
@@ -17,6 +15,7 @@ var doc = require("dynamodb-doc");
 var TABLE_NAME = "Particle-Photon-Data";
 
 var dynamodb = new doc.DynamoDB();
+var s3 = new aws.S3({params: {Bucket: 'particle-photon-data-visualization'}});
 
 exports.handler = function(event, context, callback) {
     console.log("Request received:\n", JSON.stringify(event));
@@ -74,6 +73,14 @@ exports.handler = function(event, context, callback) {
     } */
 
     console.log("Item:\n", item);
+
+    s3.upload(item, function (err, res) {               
+        if (err) {
+            console.log("Error in uploading file on s3 due to "+ err)
+        } else {   
+            console.log("File successfully uploaded to s3.")
+        }
+    });
 
     // Put into DynamoDB!
     dynamodb.putItem({
