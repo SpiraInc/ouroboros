@@ -1,9 +1,14 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <LiquidCrystal_I2C_Spark.h>
+
+// This #include statement was automatically added by the Particle IDE.
+#include <OneWire.h>
+
 //Website
 //      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
 
-// This #include statement was automatically added by the Particle
-#include <OneWire.h>
 
+#define  PARTICLE_DEVICE_NAME "Demo-Build"
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
 unsigned long int avgValue;  //Store the average value of the sensor feedback
 float b;
@@ -14,13 +19,14 @@ char resultstr[256];
 int measure = 0;
 
 
-OneWire ds = OneWire(D4);
+OneWire ds = OneWire(D2);
 int led = D7;                   // The on-board LED    
 unsigned long lastUpdate = 0;    
 float Temp = -100;
 
 float phValue = 0;
 
+LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 void setup()
 {
@@ -32,20 +38,35 @@ void setup()
     
     //pinMode(A0, INPUT); // setup A0 as analog input
     
+    lcd.init();                      // initialize the lcd 
+    lcd.init();
+    // Print a message to the LCD.
+    lcd.backlight();
+    lcd.setCursor(3,0);
+    lcd.print("Collecting");
+    lcd.setCursor(3,1);
+    lcd.print("Your Data");
+    lcd.setCursor(3,2);
+    lcd.print("Now...");
+    //lcd.setCursor(1,3);
+    //Time.zone(-5.00);
+    
 }
 
 
 void loop()
 {
     PHfunction();
-    delay(1000);
+    delay(100000);
     Particle.publish("phValue", String(phValue, 2));
     delay(10000);
     //Particle.publish("avgValue", String((float)avgValue, 2));
     //delay (10000); // Make sure you don't overload the console!  Keep above 2000 (2 seconds), also keep in mind that you have to let the probe sit for 2 minutes in the buffer solution anyway to get a correct reading.
     temperaturefunction();
-    delay(1000);
+    delay(100000);
     Particle.publish("Temp", String(Temp, 2));
+    delay(10000);
+    LCDfunction();
     delay(1000);
 }
     void PHfunction()
@@ -152,4 +173,23 @@ void temperaturefunction()
     delay(1000); // wait for a second
     //digitalWrite(led, LOW);
     } // signal light off
-
+void LCDfunction()
+{
+    lcd.setCursor(1,0);
+    lcd.print("Current       ");
+    lcd.setCursor(1,1);
+    lcd.print("Tank Environment:");
+    lcd.setCursor(3,2);
+    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
+    lcd.print("Temp = ");
+    delay(1000);
+    lcd.setCursor(10,2);
+    lcd.print(Temp);
+    delay(1000);
+    lcd.setCursor(3,3);
+    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
+    lcd.print("pH = ");
+    delay(1000);
+    lcd.setCursor(8,3);
+    lcd.print(phValue);
+}
