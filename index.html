@@ -7,16 +7,25 @@
 
   <title>Spira Data Visualization</title>
 
-  <!-- Stylesheet -->
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <!-- Stylesheets -->
+  <link href="dist/metricsgraphics.css" rel="stylesheet" type="text/css">
+  <link href="style.css" rel="stylesheet" type="text/css">
 
   <!-- JavaScript -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.40.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="https://d3js.org/d3.v4.js"></script>
+  <script src="dist/metricsgraphics.min.js"></script>
   <script src="script.js"></script>
+
 </head>
 
 <body>
-  <h1 id="main-title">Hello World!</h1>
+  <h1 id="main-title">Data Dashboard</h1>
+
+  <svg id="tempGraph"></svg>
+  <svg id="phGraph"></svg>
+
 
 </body>
 

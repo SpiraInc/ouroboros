@@ -107,7 +107,7 @@ context.succeed(response);
 
 To export to our Adafruit.io dashboard, we created an IFTTT applet that listens for the Particle events and then posts the data to the dashboard.
 
-This approach is limited by the fact that the IFTTT applet can only be implemented for one specific device.  Data posting could also be done through implementation in Particle Build, using Adafruit's client/server libraries. However we decided to use Adafruit as our quick and basic option, and instead will use D3 on S3 for our primary method of data visualization in the long-term.
+This approach is limited by the fact that the IFTTT applet can only be implemented for one specific device.  Data posting could also be done through implementation in Particle Build, using Adafruit's client/server libraries. However we decided to use Adafruit as our quick and basic option, and instead will use D3 on S3 for our primary method of data visualization in the long-term.  We used the [MetricsGraphics](https://www.metricsgraphicsjs.org/) library, which is built on top of D3.
 
 ### Creating the S3 bucket
 
@@ -118,38 +118,135 @@ To create the S3 bucket, go to the S3 Resource and click _Create Bucket_.  The b
  - In _Set properties_ and _Set permissions_, none of the permissions were changed from default.
  - Once the bucket has been created, click on it in the S3 Resource, and click _Properties -> Static Website Hosting -> Use this bucket to host a website_.  Then we set the name of the file with the website code to `index.html` and an error file to `error.html`.
 
-We must upload an index file, as well as a javascript file (`script.js`) and a CSS stylesheet file (`style.css`) to the S3 bucket.  This is done without changing defaults, except for selecting _Grant public read access to this object(s)_ in the _Select Files_ step.
+We must upload an index file, as well as a javascript file (`script.js`), a CSS stylesheet file (`style.css`), and a set of MetricsGraphics files (first create a `dist` subfolder to hold them) to the S3 bucket.  This is done without changing defaults, except for selecting _Grant public read access to this object(s)_ in the _Select Files_ step. 
 
 We must also obtain credentials that allow the website's code to access our DynamoDB table.  This is done by creating an IAM User and a custom Policy that provides read permissions on our table.
 
-### Writing the website code
+### Writing the website HTML
 
-The `index.html` code is a standard HTML document.  Note some important details:
+The `index.html` code is a standard HTML document.  The header includes references to the following files:
 
- - The header must include the AWS SDK script file, which allows us to connect and work with DynamoDB. Include the tag: 
+ - the AWS SDK script file, which allows us to connect and work with DynamoDB
+ - the D3 v4 script file
+ - the MetricsGraphics script file
+ - the JQuery script file
+ - our own script file
+ - the MetricsGraphics stylesheet
+ - our own stylesheet. 
+
+Include the script tags in this order: 
 ```
-<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.40.min.js"></script>
-```
- - In order for this web page to run our javascript code, include this tag as well:
-```
+<script src='https://sdk.amazonaws.com/js/aws-sdk-2.1.40.min.js'></script>
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'></script>
+<script src='https://d3js.org/d3.v4.js'></script>
+<script src='dist/metricsgraphics.min.js'></script>
 <script src="script.js"></script>
 ```
+Include the stylesheet tags in this order:
+```
+<link href="dist/metricsgraphics.css" rel="stylesheet" type="text/css">
+<link href="style.css" rel="stylesheet" type="text/css">
+```
 
-In `script.js`, we start by creating a connection to AWS services using the following code:
+In the body, there is an SVG element for each graph:
+
+### Querying the DynamoDB table
+
+The graphs for our website will display temperature and pH data collected over the past 24 hours.  We write queries in our website's javascript to fetch this data from our DynamoDB table.
+
+In `script.js`, we start by creating a connection to AWS services:
 ```
 AWS.config.region = 'us-east-1'; // Region
 AWS.config.credentials = new AWS.Credentials('[Access key ID]', '[Secret access key]');
 ```
+And create an object to access DynamoDB:
+```
+var dynamodb = new AWS.DynamoDB();
+```
+Create a timestamp for 24 hours ago:
+```
+var dayAgoTimeStamp = new Date().getTime() - 86400000;
+dayAgoTimeStamp = new Date(dayAgoTimeStamp).toISOString();
+```
 
+Write the query parameters according to DynamoDB query conventions.  Our queries tell DynamoDB to return data entries where the device attribute is `Demo-build`, the event attribute is `Temp` or `phValue`, and the time attribute is greater than or equal to `dayAgoTimeStamp` (according to String comparison):
+```
+var temperatureParams = { 
+    TableName: TABLE_NAME,
+    KeyConditionExpression: '(#device = :d) and (#time >= :timeStamp)',
+    FilterExpression: '#event = :dataType',
+    ExpressionAttributeNames: {
+    	'#device': 'device',
+    	'#event': 'event',
+        '#time': 'time'
+    },
+    ExpressionAttributeValues: {
+    	':d': {"S":"Demo-build"},
+    	':dataType': {"S":"Temp"}, //or "S":"phValue"
+        ':timeStamp': {"S":dayAgoTimeStamp}
+    }
+};
+```
+
+The query is performed with the following command:
+```
+dynamodb.query(temperatureParams, function(err, data) {
+    if (err) {
+      console.log(err);
+      return null;
+    } else {
+      // do things with query data
+    }
+});
+```
+
+The query results are saved in the `data` variable shown above.  In the _else_ statement, we iterate through `data` and extract each time and temperature (or pH) value.  We also process it into the proper format for D3, which means each data point is saved as an object, the time is converted to a Date object, and temperature and pH are converted to numbers.  Finally, each data point object is inserted into an array:
+```
+for (var key in data.Items) {
+    var currentTemp = data.Items[key].data.S;
+    var currentTime = data.Items[key].time.S;
+    var dataPoint = {
+        "time": new Date(currentTime.substring(0,19)),
+        "temp": +currentTemp
+    }
+    temperatureData.push(dataPoint);
+}
+```
 ### Creating Visualizations with D3
 
+Once we have made our queries, the `drawAll()` function is called. Since javascript is asynchronous, this function may be called before the queries have completed.  So before doing any drawing, we check to see if the data has been entered to our arrays.  If not, wait 100 milliseconds and then try again:
+
+```
+function drawAll () {
+    if (temperatureData.length == 0 || phData.length == 0) {
+        setTimeout(function(){drawAll()},100);
+    }else{
+        // draw graphs!
+    }
+}
+```
+
+The temperature graph is created and drawn using this function:
+```
+MG.data_graphic({
+    title: "Temperature Data",
+    data: temperatureData,
+    width: 650,
+    height: 350,
+    full_width: true,
+    full_height: true,
+    target: '#tempGraph',
+    x_accessor: 'time',
+    y_accessor: 'temp',
+    xax_format: format_x_label,
+    x_mouseover: format_x_tooltip,
+    y_mouseover: format_y_tooltip,
+    animate_on_load: true
+});
+```
 ### Testing
 
 The S3 website can be tested by writing console logs in the `script.js` code, then opening the S3 website in Google Chrome (most other browsers will work as well),  and pressing _Ctrl+Shift+I_ to open developer tools.  Click the _Console_ tab to view any logs that have occurred since the web page loaded, as shown in this graphic:
-
-### Particle Photon Functions
-
-The photon uses the 'LiquidCrystal_I2C_Spark.h' and 'OneWire.h' library.
 
 License
 ----
