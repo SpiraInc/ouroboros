@@ -1,4 +1,4 @@
-﻿[![N|Solid](https://www.livespira.com/wp-content/uploads/2017/02/spira_logotype_Spira-Green_rgb-1.png)](https://www.livespira.com/)
+﻿[![Spira](https://www.livespira.com/wp-content/uploads/2017/02/spira_logotype_Spira-Green_rgb-1.png)](https://www.livespira.com/)
 # Overview
 This guide documents the steps required to ingest time series sensor data from Particle Photon chips, post this data to the AWS database and Adafruit.io, and create D3 visualizations of data on an S3 website.
 
@@ -27,7 +27,9 @@ In order to log the device name, a variable encoding the device name must be def
 
 ###  Creating the AWS Data Table
 
-We will be using an AWS DynamoDB table to store our data, which has been named `Particle-Photon-Data`.  The table was created by clicking _Create table_ in the DynamoDB dashboard.  The table properties and settings were chosen as shown in the graphic below:
+We will be using an AWS DynamoDB table to store our data, which has been named `Particle-Photon-Data`.  The table was created by clicking _Create table_ in the DynamoDB dashboard.  The table properties and settings were chosen as shown:
+
+![Creating Table](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Table.PNG)
 
 The successfully logged data can be viewed in the DynamoDB dashboard as shown below:
 
