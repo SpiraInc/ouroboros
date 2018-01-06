@@ -1,12 +1,12 @@
 ﻿[![Spira](https://www.livespira.com/wp-content/uploads/2017/02/spira_logotype_Spira-Green_rgb-1.png)](https://www.livespira.com/)
 # Overview
-This guide documents the steps required to ingest time series sensor data from Particle Photon chips, post this data to the AWS database and Adafruit.io, and create D3 visualizations of data on an S3 website.
+This guide documents the steps required to ingest time series sensor data from Particle Photon devices, post this data to an AWS database and Adafruit.io, and create D3 graphs of this data on an S3 website.
 
-The chip is being programmed in C++ using the Particle Build interface. It is currently logging temperature and pH data, and we aim to expand to more outputs.  The current goal is to create Particle webhooks that listen to the chip's published data, then POST the data to a AWS API Gateway Endpoint where an AWS Lambda function will ingest the data and post to AWS DynamoDB. An AWS S3 website will query DynamoDB and create graphs using the D3.js library.  There will also be Particle code that will POST the data to Adafruit.io to create pretty graphs. 
+The Photon is being programmed in C++ using the Particle Build interface. It is currently logging temperature and pH data, and we aim to expand to more outputs.  The current goal is to create Particle Webhooks that listen to the Photon's published data, then POST the data to a AWS API Gateway Endpoint where an AWS Lambda function will ingest the data and post to AWS DynamoDB. An AWS S3 website will query DynamoDB and create graphs using the D3.js library.  There will also be an IFTTT applet that will post the data to Adafruit.io to create additional graphs. 
 
 ### Obtaining sensor data from Particle Build
 
-The main code for this chip is the app [`particle_master`](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every minute or so, and this data is published (made available to the Webhooks) using the following commands:
+The main code for this device is the app [`particle_master`](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every few minutes, and this data is published (made available to the Webhooks) using the following commands:
 
 ```
 Particle.publish("phValue", String(phValue, 2));
@@ -27,37 +27,55 @@ In order to log the device name, a variable encoding the device name must be def
 
 ###  Creating the AWS Data Table
 
-We will be using an AWS DynamoDB table to store our data, which has been named `Particle-Photon-Data`.  The table was created by clicking _Create table_ in the DynamoDB dashboard.  The table properties and settings were chosen as shown:
+We will be using an AWS DynamoDB Table to store our data, which has been named `Particle-Photon-Data`.  The table was created by clicking _Create table_ in the DynamoDB dashboard.  The table properties and settings were chosen as shown:
 
 ![Creating Table](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Table.PNG)
 
-The successfully logged data can be viewed in the DynamoDB dashboard as shown below:
+The successfully logged data can be viewed in the DynamoDB dashboard as shown:
+
+![Viewing Data](https://github.com/SpiraInc/ouroboros/blob/master/images/View%20db%20data.PNG)
 
 ### Creating the Lambda Function for processing data
 
-The lambda function can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  The lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_.  Our lambda function is named `Particle-Data-Lambda` and settings were chosen as shown in the graphic below:
+The lambda function, which has been named `Particle-Data-Lambda`, can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  Our lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_, and settings were chosen as shown:
 
-The function's Role must have permission to write to DynamoDB.  To provide this permission, we created a new Role by clicking _Create a custom role_ in the _Role_ dropdown menu shown above.  This redirects to creation of an IAM Role, which was done as shown below:
+![Creating Lambda Function](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Lambda%20Function.PNG)
 
-To add the necessary permissions, navigate to the IAM Dashboard and click _Roles -> Your new Role -> Attach policy_ and select the _AmazonDynamoDBFullAccess_ permissions policy:
+Note that the Role chosen was _ParticleDataLambdaRole_.  Our function must have a Role that gives it permission to write to DynamoDB.  To provide this, we created a new Role by clicking _Create a custom role_ in the _Role_ dropdown menu shown above.  This redirects to creation of an IAM Role, which was done as shown below:
 
-Now, return to creation of the lambda function and select _Choose an existing role_ in the _Role_ dropdown menu, and select the new Role.  Then click _Create function_.
+![Creating Role](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Role.PNG)
+
+Click _Allow_, then navigate to the IAM Dashboard and click _Roles -> Your new Role -> Attach policy_ and select the _AmazonDynamoDBFullAccess_ permissions policy:
+
+![Creating Role](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Role.PNG)
+
+Now, return to creation of the lambda function and select _Choose an existing role_ in the _Role_ dropdown menu, and select the new Role as shown in the original screenshot.  Then click _Create function_.
 
 ### Creating the API Gateway Endpoint
 
-The API Gateway Endpoint was built with Lambda proxy integration as opposed to custom integration.  More information about the difference between these two can be found [here](https://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-with-lambda-integration.html).
+The API Gateway Endpoint provides a means for sending input to the Lambda function.  Setting up the API Gateway Endpoint includes creating the Endpoint using Lambda proxy integration, creating an API Key, and creating a Usage Plan.  
 
-Open the Particle-Data-Lambda Configuration and click _API Gateway_.
+Open the Lambda Console, navigate to the Particle-Data-Lambda Configuration tab, click _API Gateway_, and scroll down to _Configure triggers_:
 
- - The API name is `ParticleAPIGateway`.
- - The deployment stage is _prod_.
- - The security mechanism is _Open with access key_.
+![Creating API Gateway](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20API%20Gateway.PNG)
 
-Click _Create_ then _Save_ in order to finish setting up the API.  Now, the API url with endpoint value is available as shown below:
+Click _Add_, then at the top of the page click _Save_.  Now, the API url with endpoint value is available as shown:
 
-To obtain the API key, navigate to the API Gateway and click _API Keys -> Actions -> Create API Key_.  The key was named `ParticleAPIGatewayKey` as shown below:
+![View API Gateway Endpoint](https://github.com/SpiraInc/ouroboros/blob/master/images/Viewing%20Gateway%20Endpoint.PNG)
 
-In order to associate this key with our API Gateway Endpoint, a Usage Plan must be created.
+Now we need to create the access key.  Open the API Gateway Console and click _API Keys -> Actions -> Create API Key_.  The key was named `ParticleAPIGatewayKey` as shown below:
+
+![Creating API Key](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20API%20Key.PNG)
+
+In order to associate this key with our API Gateway Endpoint, a Usage Plan must be created.  In the API Gateway Console, click _Usage Plans -> Create_:
+
+![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan.PNG)
+![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan.PNG)
+![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan.PNG)
+
+Now, the API key can be viewed as shown:
+
+![Viewing API Key](https://github.com/SpiraInc/ouroboros/blob/master/images/View%20API%20Key.PNG)
 
 ### Creating the Webhooks
 
@@ -75,8 +93,9 @@ Click _Advanced Settings_.
 
 Click _Create Webhook_.
 
-
 ### Testing
+
+The Webhook logs can be monitored by opening the Particle Console and clicking _Integrations_, selecting a Webhook, and scrolling down to _Logs_.  A list of logs associated with recent publish events is shown.  In particular, the _Response_ section of a log is useful for investigating why an attempt to insert in DynamoDB was unsuccessful.
 
 The lambda function's console logs can be monitored by navigating to the Particle-Data-Lambda Montioring Resource and clicking _Jump to Logs_.  However, a CloudWatch Log Group will have to be created in order to receive logs.
 
