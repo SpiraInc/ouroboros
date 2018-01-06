@@ -47,7 +47,7 @@ Note that the Role chosen was _ParticleDataLambdaRole_.  Our function must have 
 
 Click _Allow_, then navigate to the IAM Dashboard and click _Roles -> Your new Role -> Attach policy_ and select the _AmazonDynamoDBFullAccess_ permissions policy:
 
-![Creating Role](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Role.PNG)
+![Creating Role](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Role%20(2).PNG)
 
 Now, return to creation of the lambda function and select _Choose an existing role_ in the _Role_ dropdown menu, and select the new Role as shown in the original screenshot.  Then click _Create function_.
 
@@ -61,7 +61,7 @@ Open the Lambda Console, navigate to the Particle-Data-Lambda Configuration tab,
 
 Click _Add_, then at the top of the page click _Save_.  Now, the API url with endpoint value is available as shown:
 
-![View API Gateway Endpoint](https://github.com/SpiraInc/ouroboros/blob/master/images/Viewing%20Gateway%20Endpoint.PNG)
+![View API Gateway Endpoint](https://github.com/SpiraInc/ouroboros/blob/master/images/View%20Gateway%20Endpoint.PNG)
 
 Now we need to create the access key.  Open the API Gateway Console and click _API Keys -> Actions -> Create API Key_.  The key was named `ParticleAPIGatewayKey` as shown below:
 
@@ -70,8 +70,8 @@ Now we need to create the access key.  Open the API Gateway Console and click _A
 In order to associate this key with our API Gateway Endpoint, a Usage Plan must be created.  In the API Gateway Console, click _Usage Plans -> Create_:
 
 ![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan.PNG)
-![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan.PNG)
-![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan.PNG)
+![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan%20(2).PNG)
+![Creating Usage Plan](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Usage%20Plan%20(3).PNG)
 
 Now, the API key can be viewed as shown:
 
