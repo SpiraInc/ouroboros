@@ -7,7 +7,7 @@
 // Set up connection to AWS
 //
 AWS.config.region = 'us-east-1'; // Region
-AWS.config.credentials = new AWS.Credentials('AKIAJOZYYEONYVPQRMJQ', 'VBheR/39pJewkh83eEKueTr8xvEVH7MpgWGRhsLE');
+AWS.config.credentials = new AWS.Credentials('[Access key ID]', '[Secret access key]');
 
 //
 // Constants
