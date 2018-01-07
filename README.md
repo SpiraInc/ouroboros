@@ -141,7 +141,27 @@ To create the S3 bucket, go to the S3 Resource and click _Create Bucket_.  The b
 
 We must upload an index file, as well as a javascript file (`script.js`), a CSS stylesheet file (`style.css`), and a set of MetricsGraphics files (first create a `dist` subfolder to hold them) to the S3 bucket.  This is done without changing defaults, except for selecting _Grant public read access to this object(s)_ in the _Select Files_ step. 
 
-We must also obtain credentials that allow the website's code to access our DynamoDB table.  This is done by creating an IAM User and a custom Policy that provides read permissions on our table.
+We must also obtain credentials that allow the website's code to access our DynamoDB table.  This is done by creating an IAM User and a custom Policy that provides read permissions on our table.  Go to the IAM Console and select _Users -> Add User_, then enter specifications as shown:
+
+![Creating IAM User](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20DB%20Reader%20User.PNG)
+
+Click _Next:Permissions_, choose _Attach existing policies directly_ and click _Create policy_.  You will be redirected to creation of a policy.  Enter a JSON policy as shown:
+
+![Creating IAM User](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20DB%20Reader%20User%20(2).PNG)
+
+The DynamoDB ARN can be found by opening the DynamoDB Console, clicking _Tables -> Particle-Photon-Data_, and is found in _Table Details_ in the _Overview_ tab.  Next, click _Review Policy_ and continue:
+
+![Creating IAM User](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20DB%20Reader%20User%20(3).PNG)
+
+Then, go back to creating the User and attach the new Policy:
+
+![Creating IAM User](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20DB%20Reader%20User%20(4).PNG)
+
+Click _Review_, then _Create user_.  After that, the Access key ID and Secret access key will become available:
+
+![Viewing AWS Credentials](https://github.com/SpiraInc/ouroboros/blob/master/images/View%20AWS%20Credentials.PNG)
+
+Save these credentials for later use.
 
 ### Writing the website HTML
 
