@@ -14,6 +14,8 @@
   <!-- JavaScript -->
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.40.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="http://momentjs.com/downloads/moment.js"></script> 
+  <script src="dist/combodate.js"></script> 
   <script src="https://d3js.org/d3.v4.js"></script>
   <script src="dist/metricsgraphics.min.js"></script>
   <script src="script.js"></script>
@@ -23,6 +25,15 @@
 <body>
   <h1 id="main-title">Data Dashboard</h1>
 
+  <div id = "controls">
+    From <input type="text" id="subsetStart" data-format="DD-MM-YYYY HH:mm" data-template="D MMM YYYY     HH : mm" name="datetime">
+    <br/>
+    To <input type="text" id="subsetEnd" data-format="DD-MM-YYYY HH:mm" data-template="D MMM YYYY     HH : mm" name="datetime">
+    <button id="submitRange">Go</button>
+    <button id="originalRange">Return to 24 hr range</button>
+    <p id="errorMessage"></p>
+  </div>
+  
   <svg id="tempGraph"></svg>
   <svg id="phGraph"></svg>
 

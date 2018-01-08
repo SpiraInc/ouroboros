@@ -1,13 +1,40 @@
-html, body { height: 100%; width: 100%; margin: 0; }
+@font-face {
+	font-family: Sofia;
+	src: url("SofiaProLightReg.otf") format("opentype");
+}
+
+html, body { 
+	height: 100vw; width: 100vh; margin: 0; 
+	font-family: Sofia;
+}
+
+select {
+	font-family: Sofia;
+}
+
+button {
+	font-family: Sofia;
+	background-color: #e8e3e8;
+	border-radius: 3px;
+	cursor:pointer;
+}
+
+#controls {
+	display:none;
+}
 
 #tempGraph {
-	width:80%;
-	height:40%;
+	width:80vw;
+	height:40vh;
 }
 
 #phGraph {
-	width:80%;
-	height:40%;
+	width:80vw;
+	height:40vh;
+}
+
+#originalRange {
+	margin-left:50px;
 }
 
 .mg-area1-color {
