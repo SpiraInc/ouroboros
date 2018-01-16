@@ -2,11 +2,11 @@
 # Overview
 This guide documents the steps required to ingest time series sensor data from Particle Photon devices, post this data to an AWS database and Adafruit.io, and create D3 graphs of this data on an S3 website.
 
-The Photon is being programmed in C++ using the Particle Build interface. It is currently logging temperature and pH data, and we aim to expand to more outputs.  The current goal is to create Particle Webhooks that listen to the Photon's published data, then POST the data to a AWS API Gateway Endpoint where an AWS Lambda function will ingest the data and post to AWS DynamoDB. An AWS S3 website will query DynamoDB and create graphs using the D3.js library.  There will also be an IFTTT applet that will post the data to Adafruit.io to create additional graphs. 
+The Photon is being programmed in C++ using the Particle Build interface. It is currently logging temperature and pH data, and we aim to expand to more outputs in the near future.  The current goal is to set up Particle Webhooks that will listen to the Photon's published data, then will POST the data to a AWS API Gateway Endpoint where an AWS Lambda function will ingest the data and post to AWS DynamoDB. An AWS S3 website will query DynamoDB and create graphs using the D3.js library.  There will also be an IFTTT applet that will post the data to Adafruit.io to create additional graphs. 
 
-### Obtaining sensor data from Particle Build
+# Obtaining sensor data from Particle Build
 
-The main code for this device is the app [`particle_master`](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every few minutes, and this data is published (made available to the Webhooks) using the following commands:
+The main code for this device is in the app [_particle_master_](https://github.com/SpiraInc/ouroboros/blob/master/particle_master) on Particle Build.  When this code is run, the temperature and pH sensors are read every few minutes, and this data is published (made available to the Webhooks) using the following commands:
 
 ```
 Particle.publish("phValue", String(phValue, 2));
@@ -27,7 +27,7 @@ In order to log the device name, a variable encoding the device name must be def
 
 ###  Creating the AWS Data Table
 
-We will be using an AWS DynamoDB Table to store our data, which has been named `Particle-Photon-Data`.  The table was created by clicking _Create table_ in the DynamoDB dashboard.  The table properties and settings were chosen as shown:
+We will be using an AWS DynamoDB Table to store our data, which has been named _Particle-Photon-Data_.  The table was created by clicking _Create table_ in the DynamoDB dashboard.  The table properties and settings were chosen as shown:
 
 ![Creating Table](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Table.PNG)
 
@@ -37,7 +37,7 @@ The successfully logged data can be viewed in the DynamoDB dashboard as shown:
 
 ### Creating the Lambda Function for processing data
 
-The lambda function, which has been named `Particle-Data-Lambda`, can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  Our lambda function receives a JSON event object from the Webhook's POST request, processes the data, and inserts it into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_, and settings were chosen as shown:
+The lambda function, which has been named [_Particle-Data-Lambda_](https://github.com/SpiraInc/ouroboros/blob/master/lambda.js), can be thought of as an intermediary in the "handshake" between Particle and DynamoDB.  Our lambda function receives a JSON event object from the Webhook's POST request, processes the data contained in this object, and inserts the data into the table in DynamoDB.  It was created by navigating to the Lambda resource and clicking _Create function_, and settings were chosen as shown:
 
 ![Creating Lambda Function](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20Lambda%20Function.PNG)
 
@@ -51,9 +51,18 @@ Click _Allow_, then navigate to the IAM Dashboard and click _Roles -> Your new R
 
 Now, return to creation of the lambda function and select _Choose an existing role_ in the _Role_ dropdown menu, and select the new Role as shown in the original screenshot.  Then click _Create function_.
 
+_Particle-Data-Lambda_ is written in Node.js, and was based on [this resource](https://github.com/nicjansma/dht-logger).  An outline of the code is as follows:
+
+1. Connections to AWS and specifically DynamoDB are set up
+2. A handler function is called that receives the Webhook's POST as the parameter `event`
+3. The data is extracted from `event` by calling `JSON.parse(event.body);`
+4. Each desired data attribute is entered into a new object called `item`
+5. Attempt to post `item` to the DynamoDB Table using the function `dynamodb.putItem`
+6. A callback function will return an error if the attempt was unsuccessful, or will return a success response object if the attempt was successful
+
 ### Creating the API Gateway Endpoint
 
-The API Gateway Endpoint provides a means for sending input to the Lambda function.  Setting up the API Gateway Endpoint includes creating the Endpoint using Lambda proxy integration, creating an API Key, and creating a Usage Plan.  
+The API Gateway Endpoint provides a means for sending input to the Lambda function.  The Particle Webhook will call the API Gateway Endpoint's URL, and then it will trigger the Lambda function.  Setting up the API Gateway Endpoint includes creating the Endpoint using Lambda proxy integration, creating an API Key, and creating a Usage Plan.  
 
 Open the Lambda Console, navigate to the Particle-Data-Lambda Configuration tab, click _API Gateway_, and scroll down to _Configure triggers_:
 
@@ -86,12 +95,19 @@ Two Webhooks were created, one for logging temperature and one for logging pH.  
  - The URL is `https://[endpoint].execute-api.us-east-1.amazonaws.com/prod/Particle-Data-Lambda`
  - The Request Type is _POST_, the Request Format is _JSON_, and the Device is _Any_.
 
+![Creating AWS Webhook](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20AWS%20Webhook.PNG)
+
 Click _Advanced Settings_.  
 
  - The _JSON Data_ field shows the data portion of the event JSON that will be sent to AWS.  Add the device name to this list of properties by inserting `"device": "{{PARTICLE_DEVICE_NAME}}"`.
- - In the HTTP Headers field, add a key-value pair where the key is `x-api-key` and the value is the API key.
 
-Click _Create Webhook_.
+![Creating AWS Webhook](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20AWS%20Webhook%20(2).PNG)
+ 
+ - In the HTTP Headers field, add a key-value pair where the key is x-api-key and the value is the API key.
+
+![Creating AWS Webhook](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20AWS%20Webhook%20(3).PNG)
+
+The [HTTP request code](https://github.com/SpiraInc/ouroboros/blob/master/aws_webhook.json) can be viewed by clicking _CUSTOM TEMPLATE_. When finished, click _Create Webhook_.  
 
 ### Testing
 
@@ -99,11 +115,15 @@ The Webhook logs can be monitored by opening the Particle Console and clicking _
 
 The lambda function's console logs can be monitored by navigating to the Particle-Data-Lambda Montioring Resource and clicking _Jump to Logs_.  However, a CloudWatch Log Group will have to be created in order to receive logs.
 
-In the lambda function, you can create test functions to run the lambda function without posting data from Particle.  On the lambda function's Configuration page, go to the drop down menu next to _Test_ and click _Configure Test Events_.  
-From this we received the following error message:
+In the lambda function, you can create test event objects to run the lambda function without requiring data from Particle.  On the lambda function's Configuration page, go to the drop down menu next to _Test_ and click _Configure Test Events_.  By creating a test that modeled what the Photon would publish, we received the following error message:
+
+![Lambda Test Error](https://github.com/SpiraInc/ouroboros/blob/master/images/Lambda%20Test%20Error.PNG)
+
 This means that the lambda function is not authorized to post data to DynamoDB.  To solve this, we realized that additional permissions were required for the lambda function's Role, and added them as explained in **Creating the Lambda Function for processing data**.
 
-Upon testing data, we received the following Bad Request Response:
+Upon testing real-time data, we received the following Bad Request Response in the Webhook logs:
+
+![Webhook Log Error](https://github.com/SpiraInc/ouroboros/blob/master/images/Bad%20Request%20Response.PNG)
 
 In order to investigate this response, we set up logging of the API Gateway Endpoint.  This requires creation of a new Role that gives the API Gateway permission to log to CloudWatch.  Steps for setting this up can be found [here](https://kennbrodhagen.net/2016/07/23/how-to-enable-logging-for-api-gateway/).
 
@@ -126,7 +146,13 @@ context.succeed(response);
 
 ### Exporting to Adafruit
 
-To export to our Adafruit.io dashboard, we created an IFTTT applet that listens for the Particle events and then posts the data to the dashboard.
+To export to our Adafruit.io dashboard, we created an IFTTT applet that listens for the Particle events and then posts the data to the dashboard.  Click _My Applets -> New Applet -> +this_, choose the Particle service, and the _New event published_ trigger.  Then set up the trigger fields as shown:
+
+![Creating IFTTT Applet](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20IFTTT.PNG)
+
+For the action, choose the Adafruit service, and the _Send data to Adafruit IO_ action.  Then set up the action fields as shown:
+
+![Creating IFTTT Applet](https://github.com/SpiraInc/ouroboros/blob/master/images/Creating%20IFTTT%20(2).PNG)
 
 This approach is limited by the fact that the IFTTT applet can only be implemented for one specific device.  Data posting could also be done through implementation in Particle Build, using Adafruit's client/server libraries. However we decided to use Adafruit as our quick and basic option, and instead will use D3 on S3 for our primary method of data visualization in the long-term.  We used the [MetricsGraphics](https://www.metricsgraphicsjs.org/) library, which is built on top of D3.
 

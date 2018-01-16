@@ -4,7 +4,7 @@
 // Based on a lambda function created by Nic Jansa: https://github.com/nicjansma/dht-logger/blob/master/lambda.js
 //
 //
-// Imports
+// Imports to set up connection to AWS
 //
 var doc = require("dynamodb-doc");
 var aws = require("aws-sdk");
@@ -21,9 +21,10 @@ exports.handler = function(event, context, callback) {
     console.log("Request received:\n", JSON.stringify(event));
     console.log("Context received:\n", JSON.stringify(context));
 
-    var eventData = JSON.parse(event.body);
-    var item = {};
+    var eventData = JSON.parse(event.body); // Retrieve data from the Webhook's POST
+    var item = {}; // The new data item that will be entered in the DynamoDB Table
 
+    // Since we have not yet set up publishing the device name, hard-code it
     if (typeof eventData.device !== "undefined") {
         item.device = eventData.device;
     } else {
@@ -34,7 +35,6 @@ exports.handler = function(event, context, callback) {
         item.time = eventData.published_at;
     }
 
-    //store deviceId and event values
     if (typeof eventData.coreid !== "undefined") {
         item.deviceId = eventData.coreid;
     }
@@ -74,6 +74,7 @@ exports.handler = function(event, context, callback) {
 
     console.log("Item:\n", item);
 
+    // Upload to an S3 bucket
     s3.upload(item, function (err, res) {               
         if (err) {
             console.log("Error in uploading file on s3 due to "+ err)
@@ -92,12 +93,13 @@ exports.handler = function(event, context, callback) {
         } else {
             console.log("Successfully entered to DynamoDB");
             
+            // Create a response object that is in proper format for the API Gateway Endpoint
             var response = {
                 "statusCode": 200,
                 "headers": {},
                 "body": JSON.stringify(eventData)
             };
-            context.succeed(response);
+            context.succeed(response); // Return the success response
         }
     });
 }
