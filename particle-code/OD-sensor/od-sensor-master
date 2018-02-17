@@ -73,30 +73,36 @@ Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the senso
 		uint16_t ir, full;
 		ir = lum >> 16;
 		full = lum & 0xFFFF;
-		double tLux = (tsl.calculateLux(full,ir));
+		double tLux = (tsl.calculateLux(full,ir));  //calculate the total transmitted lux reading
 		delay(500);
-		Particle.variable("IR", ir);
-		Particle.variable("Full", full);
-		double vis = full - ir;
-		Particle.variable("Vis", vis);
+		Particle.variable("IR", ir);    //sets IR as a particle variable
+		Particle.variable("Full", full);    //sets full spectrum as a particle variable
+		double vis = full - ir; //calculates visible from full and IR
+		Particle.variable("Vis", vis); //sets visible as a particle variable
 
-		double tlux = 100;  //Total lux value
-		double length_cal = 1.24; //Length that the light has to travel in cm
-		double per_T = (tsl.calculateLux(full, ir))/(tlux);  //Percentage of transmittance
+		double eLux = 100;  //Total lux emitted value ******SET THIS AS A CONSTANT
+		double length_cal = 1.24; //Length that the light has to travel in cm ******SET THIS AS A CONSTANT
+		double per_T = tLux/eLux;  //Percentage of transmittance calculated
 		double Abs = 2 - log10(per_T);  //Absorbtion of light
-		double Conc = Abs/(length_cal);  //Biomass density of sample (mg/cm3)
-		Particle.variable("Conc", Conc);
+		//double Conc = Abs/(length_cal);  //Biomass density of sample (mg/cm3)
+		double Conc = 95/95; // for testing
 		
+		Particle.variable("Conc", Conc);    //sets concentration as a particle variable
+		
+		//double Conc = 95/95;
+        Particle.publish("per_T: ", String(per_T, 8));
+		
+		//publish the variables
 		Particle.publish("Vis: ", String(vis, 2));
-		delay(1000);
+		delay(5000);
 		Particle.publish("Lux: ", String(tLux, 2));
-		delay(1000);
+		delay(5000);
 		Particle.publish("Concentration: ", String(Conc, 2));
-		delay(1000);
+		delay(5000);
 	}
 	
     void loop(void)
 		{
 		digitalWrite(LaserLED, HIGH); //turns the IR LED on
-		advancedRead();
+		advancedRead(); //reads the TSL2591
 		}
