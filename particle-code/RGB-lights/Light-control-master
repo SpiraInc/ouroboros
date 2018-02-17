@@ -2,7 +2,7 @@
 #include "neopixel/neopixel.h"
 
 // IMPORTANT: Set pixel COUNT, PIN and TYPE
-#define PIXEL_COUNT 256
+#define PIXEL_COUNT 2//56
 #define PIXEL_PIN D6
 #define PIXEL_TYPE WS2812B
 
@@ -27,14 +27,14 @@ void setup() {
 
 void loop() {
     spin (PURPLE);
-    delay(500);
+    delay(50);
     spin(OFF);
-    delay(500);
+    delay(50);
 }
 
 void spin(int R, int G, int B) {
     for(i=0; i < PIXEL_COUNT; i++) {
         strip.setPixelColor(i, R,G,B);
-        strip.show();
     }
+    strip.show();
 }
