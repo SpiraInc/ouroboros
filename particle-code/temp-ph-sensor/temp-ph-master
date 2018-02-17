@@ -1,9 +1,3 @@
-// This #include statement was automatically added by the Particle IDE.
-#include <OneWire.h>
-
-//Website for Surges-Sensor
-//      : https://api.spark.io/v1/devices/2c001f001847353236343033/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
-
 /*
  # This sample code is used to test the pH meter V1.0.
  # Editor : YouYou
@@ -11,23 +5,17 @@
  # Product: analog pH meter
  # SKU    : SEN0161
 */
-
-OneWire ds = OneWire(A0);
 #define SensorPin A0            //pH meter Analog output to Arduino Analog Input 0
-//#define Offset -0.10            //deviation compensate
+#define Offset 0.00            //deviation compensate
 #define LED 13
 #define samplingInterval 20
 #define printInterval 800
 #define ArrayLenth  40    //times of collection
-char resultstr[256];
 int pHArray[ArrayLenth];   //Store the average value of the sensor feedback
-int pHArrayIndex=0;
-int Offset = -0.1;
+int pHArrayIndex=0;    
 void setup(void)
-
 {
-  pinMode(LED,OUTPUT);
-  Particle.variable("result", resultstr, STRING);
+  pinMode(LED,OUTPUT);  
   Serial.begin(9600);  
   Serial.println("pH meter experiment!");    //Test the serial monitor
 }
@@ -40,20 +28,18 @@ void loop(void)
   {
       pHArray[pHArrayIndex++]=analogRead(SensorPin);
       if(pHArrayIndex==ArrayLenth)pHArrayIndex=0;
-      voltage = avergearray(pHArray, ArrayLenth)*(3.3/1024);
+      voltage = avergearray(pHArray, ArrayLenth)*5.0/1024;
       pHValue = 3.5*voltage+Offset;
       samplingTime=millis();
   }
   if(millis() - printTime > printInterval)   //Every 800 milliseconds, print a numerical, convert the state of the LED indicator
   {
-  Serial.print("Voltage:");
+	Serial.print("Voltage:");
         Serial.print(voltage,2);
         Serial.print("    pH value: ");
-  Serial.println(pHValue,2);
+	Serial.println(pHValue,2);
         digitalWrite(LED,digitalRead(LED)^1);
         printTime=millis();
-   sprintf(resultstr, "{\"pHValue\":%f}", pHValue); 
-    delay(1000); 
   }
 }
 double avergearray(int* arr, int number){
@@ -95,4 +81,3 @@ double avergearray(int* arr, int number){
   }//if
   return avg;
 }
-
