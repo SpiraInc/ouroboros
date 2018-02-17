@@ -1,14 +1,20 @@
 // This #include statement was automatically added by the Particle IDE.
+#include <Adafruit_TSL2591.h>
+
+    #include <application.h>
+    #include <spark_wiring_i2c.h>
+// This #include statement was automatically added by the Particle IDE.
 #include <LiquidCrystal_I2C_Spark.h>
 
 // This #include statement was automatically added by the Particle IDE.
 #include <OneWire.h>
-
+#include <math.h>
 //Website
 //      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
 
 
-#define  PARTICLE_DEVICE_NAME "Demo-Build"
+#define Addr 0x44  // SHT31 I2C address is 0x44(68)
+#define PARTICLE_DEVICE_NAME "Demo-Build"
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
 unsigned long int avgValue;  //Store the average value of the sensor feedback
 float b;
@@ -20,21 +26,64 @@ int measure = 0;
 
 
 OneWire ds = OneWire(D2);
-int led = D7;                   // The on-board LED
 unsigned long lastUpdate = 0;
 float Temp = -100;
-
 float phValue = 0;
+int j;
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+
+int IRled = D7; //defines IR LED at pin D7. You can tell it's on if D7 is on.
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
+
+
+    /**************************************************************************/
+    /*
+        Displays some basic information on this sensor from the unified
+        sensor API sensor_t type (see Adafruit_Sensor for more information)
+    */
+    /**************************************************************************/
+    void displaySensorDetails(void)
+    {
+      sensor_t sensor;
+      tsl.getSensor(&sensor);
+    }
+
+    /**************************************************************************/
+    /*
+        Configures the gain and integration time for the TSL2591
+    */
+    /**************************************************************************/
+    void configureSensor(void)
+    {
+      // You can change the gain on the fly, to adapt to brighter/dimmer light situations
+      tsl.setGain(TSL2591_GAIN_LOW);    // 1x gain (bright light)
+       //tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+       //tsl.setGain(TSL2591_GAIN_HIGH);   // 428x gain
+
+      // Changing the integration time gives you a longer time over which to sense light
+      // longer timelines are slower, but are good in very low light situtations!
+      tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
+      // tsl.setTiming(TSL2591_INTEGRATIONTIME_200MS);
+      // tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+      // tsl.setTiming(TSL2591_INTEGRATIONTIME_400MS);
+      // tsl.setTiming(TSL2591_INTEGRATIONTIME_500MS);
+       //tsl.setTiming(TSL2591_INTEGRATIONTIME_600MS);  // longest integration time (dim light)
+
+      /* Display the gain and integration time for reference sake */
+      tsl2591Gain_t gain = tsl.getGain();
+    }
+
+
+    double cTemp = 0.0, fTemp = 0.0, humidity = 0.0, tLux = 0.0;
+
 
 void setup()
 {
     Particle.variable("result", resultstr, STRING);
     Serial.begin(9600);
 
-
-    pinMode(led, OUTPUT);     // Signal LED
 
     //pinMode(A0, INPUT); // setup A0 as analog input
 
@@ -51,21 +100,69 @@ void setup()
     //lcd.setCursor(1,3);
     //Time.zone(-5.00);
 
+
+    pinMode(IRled,OUTPUT);  //Declares D7 as being used as the variable IRled and turns on
+      Serial.begin(9600);
+
+      /* Display some basic information on this sensor */
+      displaySensorDetails();
+
+      /* Configure the sensor */
+      configureSensor();
+
+
+
+        // Set Particle variables
+        Particle.variable("i2cdevice", "SHT31");
+        Particle.variable("lux", tLux);
+
+
+        // Initialise I2C communication as MASTER
+        Wire.begin();
+        // Initialise serial communication, set baud rate = 9600
+        Serial.begin(9600);
+
+        // Start I2C Transmission
+        Wire.beginTransmission(Addr);
+        // Send 16-bit command byte
+        Wire.write(0x2C);
+        Wire.write(0x06);
+        // Stop I2C transmission
+        Wire.endTransmission();
+        delay(300);
 }
+
+
+    void advancedRead(void)
+    {
+      // More advanced data read example. Read 32 bits with top 16 bits IR, bottom 16 bits full spectrum
+      // That way you can do whatever math and comparisons you want!
+      uint32_t lum = tsl.getFullLuminosity();
+      uint16_t ir, full;
+      ir = lum >> 16;
+      full = lum & 0xFFFF;
+      float tLux = (tsl.calculateLux(full, ir));
+    //Particle.publish("Lux: ",  String(tLux));
+      delay(500);
+      //Particle.publish("IR: ", String(ir));
+      float totlux = 100;  //Total lux value
+      float length_cal = 12.4; //Length that the light has to travel
+      float per_T = (tsl.calculateLux(full, ir))/(totlux);  //Percentage of transmittance
+      float Abs = 2 - log10(per_T);  //Absorbtion of light
+      float Conc = Abs/(length_cal);  //Biomass density of sample (mg/ml)
+      Particle.publish("Concentration: ", String(Conc, 2));
+
+      //Serial.print(Conc);
+      delay(500);
+    }
+
 
 
 void loop()
 {
-    PHfunction();
-    delay(100000);
-    temperaturefunction();
-    delay(100000);
-    Particle.publish("Temp", String(Temp, 2));
-    Particle.publish("phValue", String(phValue, 2));
-    //Particle.publish("avgValue", String((float)avgValue, 2));
-    //delay (10000); // Make sure you don't overload the console!  Keep above 2000 (2 seconds), also keep in mind that you have to let the probe sit for 2 minutes in the buffer solution anyway to get a correct reading.
-    LCDfunction();
-    delay(1000);
+    LoopTest();
+    SensorPack();
+
 }
     void PHfunction()
     {
@@ -154,40 +251,77 @@ void temperaturefunction()
 
     //if (addr[7] == 0x40)
     Temp = celsius;
-    //if (addr[7] == 0x61) Superfly = celsius;
-    //if (addr[7] == 0xA6) Erebus = celsius;
-    //if (addr[7] == 0x23) Cronus = celsius;
-    //if (addr[7] == 0x98) Monolith = celsius;
-    //if (addr[7] == 0x5) Bender = celsius;
 
-
-//    char *Gaia = "Biggles"; // read some data
-//    float Superfly = celsius;
-
-    //digitalWrite(led, HIGH); // signal light on
-    // format your data as JSON, don't forget to escape the double quotes
-    //sprintf(resultstr, "{\"Gaia\":%f,\"Superfly\":%f,\"Erebus\":%f}", Gaia, Superfly, Erebus);
-    Serial.print(Temp);
     delay(1000); // wait for a second
     //digitalWrite(led, LOW);
     } // signal light off
+
 void LCDfunction()
 {
+    Particle.publish("The LCD Screen Works!");
     lcd.setCursor(1,0);
-    lcd.print("Current       ");
-    lcd.setCursor(1,1);
     lcd.print("Tank Environment:");
-    lcd.setCursor(3,2);
-    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
+    lcd.setCursor(1,1);
     lcd.print("Temp = ");
-    delay(1000);
-    lcd.setCursor(10,2);
+    lcd.setCursor(8,1);
+    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
     lcd.print(Temp);
     delay(1000);
-    lcd.setCursor(3,3);
-    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
+    lcd.setCursor(1,2);
     lcd.print("pH = ");
     delay(1000);
-    lcd.setCursor(8,3);
+    lcd.setCursor(6,2);
+    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
     lcd.print(phValue);
+    delay(1000);
+    lcd.setCursor(1,3);
+}
+
+void ODSfunction()
+{
+        digitalWrite(IRled, HIGH); //turns the IR LED on
+      advancedRead();
+        delay(2000);
+
+
+        unsigned int data[6];
+        // Start I2C Transmission
+        Wire.beginTransmission(Addr);
+        // Stop I2C Transmission
+        Wire.endTransmission();
+
+        // Request 6 bytes of data from the device
+        Wire.requestFrom(Addr,6);
+
+        // Read 6 bytes of data
+        // temp msb, temp lsb, crc, hum msb, hum lsb, crc
+        if(Wire.available() == 6)
+        {
+            data[0] = Wire.read();
+            data[1] = Wire.read();
+            data[2] = Wire.read();
+            data[3] = Wire.read();
+            data[4] = Wire.read();
+            data[5] = Wire.read();
+        }
+        delay(500);
+
+}
+
+void SensorPack()
+{
+    PHfunction();
+    delay(1000);
+    temperaturefunction();
+    delay(1000);
+    ODSfunction();
+    Particle.publish("Temp", String(Temp, 2));
+    Particle.publish("phValue", String(phValue, 2));
+    LCDfunction();
+    delay(100000);
+}
+
+void LoopTest()
+{
+   Particle.publish("Updated to Grand Unified Code V7!");
 }
