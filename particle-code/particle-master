@@ -1,18 +1,18 @@
 // This #include statement was automatically added by the Particle IDE.
 #include <LiquidCrystal_I2C_Spark.h>
 
+
+
 // This #include statement was automatically added by the Particle IDE.
 #include <OneWire.h>
 
 //Website
 //      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
 
-
 #define  PARTICLE_DEVICE_NAME "Demo-Build"
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
 unsigned long int avgValue;  //Store the average value of the sensor feedback
 float b;
-float density;
 int buf[10],temp;
 
 
@@ -24,10 +24,10 @@ OneWire ds = OneWire(D2);
 int obled = D7;                   // The on-board LED    
 unsigned long lastUpdate = 0;    
 float Temp = -100;
-
 float phValue = 0;
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
 
 void setup()
 {
@@ -61,11 +61,8 @@ void loop()
     delay(1000);
     temperaturefunction();
     delay(1000);
-    densityfunction();
-    delay(1000);
     Particle.publish("Temp", String(Temp, 2));
     Particle.publish("phValue", String(phValue, 2));
-    Particle.publish("density", String(density,2));
     //Particle.publish("avgValue", String((float)avgValue, 2));
     //delay (10000); // Make sure you don't overload the console!  Keep above 2000 (2 seconds), also keep in mind that you have to let the probe sit for 2 minutes in the buffer solution anyway to get a correct reading.
     LCDfunction();
@@ -101,14 +98,6 @@ void loop()
   //ADDITIONAL NOTE: I used these settings and then adjusted the rheostat on the circuit board to get the calibration perfect.
   phValue=2.67*phValue;                      //convert the millivolt into pH value
     
-}
-
-void densityfunction(){
-    int sensorValue = analogRead(A1);// read the input on analog pin 0:
-  float voltage = sensorValue * (5.0 / 1024.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  //Serial.println(voltage); // print out the value you read:
-  float turbidity = (-1120.4 * (voltage*voltage)) + (5742.3 * voltage) - 4352.9; //curve fit for turbidity
-  density = -turbidity;
 }
 
 void temperaturefunction()
@@ -183,23 +172,24 @@ void temperaturefunction()
     delay(1000); // wait for a second
     //digitalWrite(led, LOW);
     } // signal light off
+
 void LCDfunction()
 {
+    Particle.publish("The Screen Works!");
     lcd.setCursor(1,0);
-    lcd.print("Current       ");
-    lcd.setCursor(1,1);
     lcd.print("Tank Environment:");
-    lcd.setCursor(3,2);
-    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
+    lcd.setCursor(1,1);
     lcd.print("Temp = ");
-    delay(1000);
-    lcd.setCursor(10,2);
+    lcd.setCursor(8,1);
+    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
     lcd.print(Temp);
     delay(1000);
-    lcd.setCursor(3,3);
-    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
+    lcd.setCursor(1,2);
     lcd.print("pH = ");
     delay(1000);
-    lcd.setCursor(8,3);
+    lcd.setCursor(6,2);
+    // Format from C library: https://www.gnu.org/software/libc/manual/html_node/Low_002dLevel-Time-String-Parsing.html
     lcd.print(phValue);
+    delay(1000);
+    lcd.setCursor(1,3);
 }
