@@ -1,0 +1,64 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <rgb-controls.h>
+
+
+#define b D5 //pin 5
+#define r D6  //pin 4
+#define g D3    //pin 3
+//#define FADESPEED 5
+
+
+void setup() 
+{
+
+    //pinMode(REDPIN,OUTPUT);    //  Output RGB LED strip
+    //pinMode(GREENPIN,OUTPUT);
+    //pinMode(BLUEPIN,OUTPUT);
+    //digitalWrite(r,150);    //  Output RGB LED strip
+    //digitalWrite(g,150);
+    //digitalWrite(b,150);
+
+}
+
+void loop() 
+{
+
+    //RGBtest();
+    delay(1000);
+
+}
+
+void RGBtest(){
+    /*int r, g, b;
+ 
+  // fade from blue to violet
+  for (r = 0; r < 256; r++) { 
+    analogWrite(REDPIN, r);
+    delay(FADESPEED);
+  } 
+  // fade from violet to red
+  for (b = 255; b > 0; b--) { 
+    analogWrite(BLUEPIN, b);
+    delay(FADESPEED);
+  } 
+  // fade from red to yellow
+  for (g = 0; g < 256; g++) { 
+    analogWrite(GREENPIN, g);
+    delay(FADESPEED);
+  } 
+  // fade from yellow to green
+  for (r = 255; r > 0; r--) { 
+    analogWrite(REDPIN, r);
+    delay(FADESPEED);
+  } 
+  // fade from green to teal
+  for (b = 0; b < 256; b++) { 
+    analogWrite(BLUEPIN, b);
+    delay(FADESPEED);
+  } 
+  // fade from teal to blue
+  for (g = 255; g > 0; g--) { 
+    analogWrite(GREENPIN, g);
+    delay(FADESPEED);
+  } */
+}
