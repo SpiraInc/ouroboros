@@ -1,1 +1,130 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <OneWire.h>
+
+//Website
+//      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
+
+
+
+char resultstr[256];
+int measure = 0;
+
+
+OneWire ds = OneWire(D4);
+int led = D7;                   // The on-board LED    
+unsigned long lastUpdate = 0;    
+float Temp = -100;
+
+float pH = 0;
+
+
+void setup()
+{
+    Particle.variable("result", resultstr, STRING);
+    Serial.begin(9600);
+
+    
+    pinMode(led, OUTPUT);     // Signal LED
+    
+    //pinMode(A0, INPUT); // setup A0 as analog input
+    
+}
+
+
+void loop()
+{
+    PHfunction();
+    delay(1000);
+    temperaturefunction();
+    delay(1000);
+    //sprintf(resultstr, "{\"Gaia\":%f,\"Superfly\":%f,\"Erebus\":%f}", Gaia, Superfly, Erebus); 
+    sprintf(resultstr, "{\"pH\":%f,\"Temp\":%f}", pH,Temp); 
+}
+    void PHfunction()
+    {
+    float convF = (1.58/4.00 + 3.75/9.18)/2;
+
+    //int data1 = D1;
+    int data1 = analogRead(A0);
+    pH = (((3.3)/(1023))*data1);
+    float convert = pH/convF;
+    
+    Serial.println(data1);
+    Serial.println(pH);
+    Serial.println(convert);
+    
+}
+
+void temperaturefunction()
+{
+    byte i;
+    byte present = 0;
+    byte type_s;
+    byte data[12];
+    byte addr[8];
+    float celsius, fahrenheit;
+    
+    if ( !ds.search(addr)) {
+        ds.reset_search();
+        delay(250);
+        return;
+    }
+
+///*    
+    // Use to determine the addressess of the sensors connected to the Photon
+    Serial.println();
+    Serial.println("ROM =");
+    for( i = 0; i < 8; i++){
+        Serial.write(' ');
+        Serial.print(addr[i]);
+        Serial.println();
+    }
+//*/
+
+    ds.reset();
+    ds.select(addr);
+    ds.write(0x44,0);
+    delay(1000);
+    
+    present = ds.reset();
+    ds.select(addr);
+    ds.write(0xB8,0);
+    ds.write(0x00,0);
+    
+    present = ds.reset();
+    ds.select(addr);
+    ds.write(0xBE,0);
+    
+    for ( i = 0; i < 9; i++){
+        data[i] = ds.read();
+    }
+
+    int16_t raw = (data[1] << 8) | data[0];
+    byte cfg = (data[4] & 0x60);    
+    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+    if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+    if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+    // default is 12 bit resolution, 750 ms conversion time
+    celsius = (float)raw * 0.0625;
+    fahrenheit = celsius * 1.8 + 32;
+  
+    //if (addr[7] == 0x40) 
+    Temp = celsius;
+    //if (addr[7] == 0x61) Superfly = celsius;    
+    //if (addr[7] == 0xA6) Erebus = celsius;
+    //if (addr[7] == 0x23) Cronus = celsius;
+    //if (addr[7] == 0x98) Monolith = celsius;
+    //if (addr[7] == 0x5) Bender = celsius;
+
+
+//    char *Gaia = "Biggles"; // read some data
+//    float Superfly = celsius;
+
+    //digitalWrite(led, HIGH); // signal light on
+    // format your data as JSON, don't forget to escape the double quotes
+    //sprintf(resultstr, "{\"Gaia\":%f,\"Superfly\":%f,\"Erebus\":%f}", Gaia, Superfly, Erebus);
+    Serial.print(Temp);
+    delay(1000); // wait for a second
+    //digitalWrite(led, LOW);
+    } // signal light off
 
