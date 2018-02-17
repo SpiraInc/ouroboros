@@ -1,34 +1,29 @@
-// This #include statement was automatically added by the Particle IDE.
 #include <Adafruit_TSL2591.h>
-
     #include <application.h>
     #include <spark_wiring_i2c.h>
-// This #include statement was automatically added by the Particle IDE.
-#include <LiquidCrystal_I2C_Spark.h>
-
-// This #include statement was automatically added by the Particle IDE.
+#include <LiquidCrystal_I2C_Spark.h>.
 #include <OneWire.h>
 #include <math.h>
-//Website
-//      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
 
 
 #define Addr 0x44  // SHT31 I2C address is 0x44(68)
 #define PARTICLE_DEVICE_NAME "Demo-Build"
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
-unsigned long int avgValue;  //Store the average value of the sensor feedback
-float b;
+
+// Variable Setup for the pH sensor
+unsigned long int avgValue;
+float b; 
 int buf[10],temp;
-
-
-char resultstr[256];
-int measure = 0;
-
-
-OneWire ds = OneWire(D2);
-unsigned long lastUpdate = 0;    
-float Temp = -100;
 float phValue = 0;
+
+// Variable Setup for the Temp Sensor
+char resultstr[256];
+OneWire ds = OneWire(D2);
+float Temp = -100;
+unsigned long lastUpdate = 0;
+
+//int measure = 0; //Uncertain what this variable is related to
+
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -159,15 +154,9 @@ void setup()
 
 void loop()
 {
-    PHfunction();
-    delay(1000);
-    temperaturefunction();
-    delay(1000);
-    ODSfunction();
-    Particle.publish("Temp", String(Temp, 2));
-    Particle.publish("phValue", String(phValue, 2));
-    LCDfunction();
-    delay(100000);
+    LoopTest();
+    SensorPack();
+
 }
     void PHfunction()
     {
@@ -311,4 +300,22 @@ void ODSfunction()
         }
         delay(500);
       
+}
+
+void SensorPack()
+{
+    PHfunction();
+    delay(1000);
+    temperaturefunction();
+    delay(1000);
+    ODSfunction();
+    Particle.publish("Temp", String(Temp, 2));
+    Particle.publish("phValue", String(phValue, 2));
+    LCDfunction();
+    delay(100000);    
+}
+
+void LoopTest()
+{
+   Particle.publish("Updated to Grand Unified Code V7!");
 }
