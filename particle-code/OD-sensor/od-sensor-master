@@ -1,0 +1,102 @@
+// This #include statement was automatically added by the Particle IDE.
+// These libraries are used by the Adafruit TSL2591 sensor
+#include <Adafruit_TSL2591.h>
+#include <math.h>
+#include <application.h>
+#include <spark_wiring_i2c.h>
+
+// SHT31 I2C address is 0x44(68)
+#define Addr 0x44   
+
+int LaserLED = D7; //defines IR LED at pin D7. You can tell it's on if D7 is on.
+
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
+
+		/**************************************************************************/
+		/*
+				Configures the gain and integration time for the TSL2591
+		*/
+		/**************************************************************************/
+		void configureSensor(void)
+		{
+			// You can change the gain on the fly, to adapt to brighter/dimmer light situations
+			tsl.setGain(TSL2591_GAIN_LOW);    // 1x gain (bright light) used for the laser
+			
+				//tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+				//tsl.setGain(TSL2591_GAIN_HIGH);   // 428x gain
+
+			// Changing the integration time gives you a longer time over which to sense light
+			// longer timelines are slower, but are good in very low light situtations!
+			tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light) used for the laser
+			
+				// tsl.setTiming(TSL2591_INTEGRATIONTIME_200MS);
+				// tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+				// tsl.setTiming(TSL2591_INTEGRATIONTIME_400MS);
+				// tsl.setTiming(TSL2591_INTEGRATIONTIME_500MS);
+				//tsl.setTiming(TSL2591_INTEGRATIONTIME_600MS);  // longest integration time (dim light)
+
+			tsl2591Gain_t gain = tsl.getGain();	//sets the gain
+		}
+		
+		double cTemp = 0.0, fTemp = 0.0, humidity = 0.0, tLux = 0.0;
+		
+		void setup(void)
+		{
+			pinMode(LaserLED,OUTPUT);  //Declares D7 as being used as the variable LaserLED and turns on
+			
+			// Initialise I2C communication as MASTER 
+			Wire.begin();
+			Serial.begin(9600); // Initialise serial communication, set baud rate = 9600
+			
+			/* Configure the sensor */
+			configureSensor();
+					
+			// Set Particle variables
+			Particle.variable("i2cdevice", "SHT31");
+			Particle.variable("lux", tLux);
+
+			// Start I2C Transmission
+			Wire.beginTransmission(Addr);
+			// Send 16-bit command byte          
+			Wire.write(0x2C);
+			Wire.write(0x06);
+			// Stop I2C transmission
+			Wire.endTransmission();
+			delay(300);
+	}
+
+	void advancedRead(void)
+	{
+		// More advanced data read example. Read 32 bits with top 16 bits IR, bottom 16 bits full spectrum
+		// That way you can do whatever math and comparisons you want!
+		uint32_t lum = tsl.getFullLuminosity();
+		uint16_t ir, full;
+		ir = lum >> 16;
+		full = lum & 0xFFFF;
+		double tLux = (tsl.calculateLux(full,ir));
+		delay(500);
+		Particle.variable("IR", ir);
+		Particle.variable("Full", full);
+		double vis = full - ir;
+		Particle.variable("Vis", vis);
+
+		double tlux = 100;  //Total lux value
+		double length_cal = 1.24; //Length that the light has to travel in cm
+		double per_T = (tsl.calculateLux(full, ir))/(tlux);  //Percentage of transmittance
+		double Abs = 2 - log10(per_T);  //Absorbtion of light
+		double Conc = Abs/(length_cal);  //Biomass density of sample (mg/cm3)
+		Particle.variable("Conc", Conc);
+		
+		Particle.publish("Vis: ", String(vis, 2));
+		delay(1000);
+		Particle.publish("Lux: ", String(tLux, 2));
+		delay(1000);
+		Particle.publish("Concentration: ", String(Conc, 2));
+		delay(1000);
+	}
+	
+    void loop(void)
+		{
+		digitalWrite(LaserLED, HIGH); //turns the IR LED on
+		advancedRead();
+		}
