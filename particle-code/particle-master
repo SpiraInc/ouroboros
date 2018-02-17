@@ -8,14 +8,13 @@
 
 // This #include statement was automatically added by the Particle IDE.
 #include <OneWire.h>
-
 #include <math.h>
 //Website
 //      : https://api.spark.io/v1/devices/1d002a001347333438373338/result?access_token=79f91e4993fc5439f7f9e0302d5ec1b75a9bd01c
 
 
 #define Addr 0x44  // SHT31 I2C address is 0x44(68)
-#define  PARTICLE_DEVICE_NAME "Demo-Build"
+#define PARTICLE_DEVICE_NAME "Demo-Build"
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
 unsigned long int avgValue;  //Store the average value of the sensor feedback
 float b;
@@ -48,16 +47,6 @@ Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the senso
     {
       sensor_t sensor;
       tsl.getSensor(&sensor);
-      Serial.println("------------------------------------");
-      Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-      Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-      Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-      Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" lux");
-      Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" lux");
-      Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" lux");
-      Serial.println("------------------------------------");
-      Serial.println("");
-      delay(500);
     }
     
     /**************************************************************************/
@@ -82,29 +71,7 @@ Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the senso
        //tsl.setTiming(TSL2591_INTEGRATIONTIME_600MS);  // longest integration time (dim light)
     
       /* Display the gain and integration time for reference sake */
-      Serial.println("------------------------------------");
-      Serial.print  ("Gain:         ");
       tsl2591Gain_t gain = tsl.getGain();
-      /*switch(gain)
-      {
-        case TSL2591_GAIN_LOW:
-          Serial.println("1x (Low)");
-          break;
-        case TSL2591_GAIN_MED:
-          Serial.println("25x (Medium)");
-          break;
-        case TSL2591_GAIN_HIGH:
-          Serial.println("428x (High)");
-          break;
-        case TSL2591_GAIN_MAX:
-          Serial.println("9876x (Max)");
-          break;
-      }*/
-      Serial.print  ("Timing:       ");
-      Serial.print((tsl.getTiming() + 1) * 100, DEC);
-      Serial.println(" ms");
-      Serial.println("------------------------------------");
-      Serial.println("");
     }
     
     
@@ -135,18 +102,6 @@ void setup()
     
     pinMode(IRled,OUTPUT);  //Declares D7 as being used as the variable IRled and turns on
       Serial.begin(9600);
-    
-      Serial.println("Starting Adafruit TSL2591 Test!");
-    
-      if (tsl.begin())
-      {
-        Serial.println("Found a TSL2591 sensor");
-      }
-      else
-      {
-        Serial.println("No sensor found ... check your wiring?");
-        while (1);
-      }
     
       /* Display some basic information on this sensor */
       displaySensorDetails();
@@ -185,22 +140,16 @@ void setup()
       uint16_t ir, full;
       ir = lum >> 16;
       full = lum & 0xFFFF;
-      Serial.print("[ "); Serial.print(millis()); Serial.print(" ms ] ");
-      Serial.print("IR: "); Serial.print(ir);  Serial.print("  ");
-      Serial.print("Full: "); Serial.print(full); Serial.print("  ");
-      Serial.print("Visible: "); Serial.print(full - ir); Serial.print("  ");
-      Serial.print("Lux: "); Serial.println(tsl.calculateLux(full, ir));
       float tLux = (tsl.calculateLux(full, ir));
     //Particle.publish("Lux: ",  String(tLux));
       delay(500);
-      Particle.publish("IR: ", String(ir));
-      
+      //Particle.publish("IR: ", String(ir));
       float totlux = 100;  //Total lux value
       float length_cal = 12.4; //Length that the light has to travel
       float per_T = (tsl.calculateLux(full, ir))/(totlux);  //Percentage of transmittance
       float Abs = 2 - log10(per_T);  //Absorbtion of light
       float Conc = Abs/(length_cal);  //Biomass density of sample (mg/ml)
-      Particle.publish("Concentration: ", Conc);
+      Particle.publish("Concentration: ", String(Conc, 2));
       
       //Serial.print(Conc);
       delay(500);
@@ -307,26 +256,14 @@ void temperaturefunction()
   
     //if (addr[7] == 0x40) 
     Temp = celsius;
-    //if (addr[7] == 0x61) Superfly = celsius;    
-    //if (addr[7] == 0xA6) Erebus = celsius;
-    //if (addr[7] == 0x23) Cronus = celsius;
-    //if (addr[7] == 0x98) Monolith = celsius;
-    //if (addr[7] == 0x5) Bender = celsius;
 
-
-//    char *Gaia = "Biggles"; // read some data
-//    float Superfly = celsius;
-
-    //digitalWrite(led, HIGH); // signal light on
-    // format your data as JSON, don't forget to escape the double quotes
-    //sprintf(resultstr, "{\"Gaia\":%f,\"Superfly\":%f,\"Erebus\":%f}", Gaia, Superfly, Erebus);
-    Serial.print(Temp);
     delay(1000); // wait for a second
     //digitalWrite(led, LOW);
     } // signal light off
 
 void LCDfunction()
 {
+    Particle.publish("The LCD Screen Works!");
     lcd.setCursor(1,0);
     lcd.print("Tank Environment:");
     lcd.setCursor(1,1);
@@ -351,10 +288,6 @@ void ODSfunction()
       advancedRead();
         delay(2000);
 
-    //    digitalWrite(IRled, LOW); //turns the IR LED off
-      advancedRead();
-
-      delay(2000);
     
         unsigned int data[6];
         // Start I2C Transmission
@@ -378,16 +311,4 @@ void ODSfunction()
         }
         delay(500);
       
-        // Convert the data
-        // float cTemp = ((((data[0] * 256.0) + data[1]) * 175.72) / 65536.0) - 46.85;
-        // float fTemp = (cTemp * 1.8) + 32;
-        // float humidity = ((((data[3] * 256.0) + data[4]) * 125) / 65535.0) - 6;
-        
-        // Output data to dashboard
-        //Particle.publish("Temperature in Celsius: ",  String(cTemp));
-        //delay(500);
-        //Particle.publish("Temperature in Fahrenheit: ", String(fTemp));
-        //delay(500);
-        //Particle.publish("Relative Humidity: ",  String(humidity));
-        //delay(500);
 }
