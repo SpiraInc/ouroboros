@@ -1,14 +1,34 @@
+#include "application.h"
+#include "neopixel/neopixel.h"
 // 3 Libraries used in this program
+// This #include statement was automatically added by the Particle IDE.
 #include <Adafruit_TSL2591.h> //Library 1
-    #include <application.h>
-    #include <spark_wiring_i2c.h>
-#include <LiquidCrystal_I2C_Spark.h>. //Library 2
-#include <OneWire.h> //Library 3
+// This #include statement was automatically added by the Particle IDE.
+#include <OneWire.h>
+// This #include statement was automatically added by the Particle IDE.
+#include <LiquidCrystal_I2C_Spark.h>
+
+// These libraries don't need to be manually added
+#include <application.h>
+#include <spark_wiring_i2c.h>
 #include <math.h>
 
 #define Addr 0x44  // SHT31 I2C address is 0x44(68)
 #define PARTICLE_DEVICE_NAME "Demo-Build"
 #define SensorPin A0          //pH meter Analog output to Photon Analog Input A0
+
+// IMPORTANT: Set pixel COUNT, PIN and TYPE
+#define PIXEL_COUNT 255
+#define PIXEL_PIN D6
+#define PIXEL_TYPE WS2812B
+
+#define PEACH 200,50,5
+#define CYAN 10,150,70
+#define PURPLE 180,3,180
+#define BLUE 5,5,190
+#define WHITE 150,150,150
+#define GREEN 10,180,10
+#define OFF 0,0,0
 
 // Variables Setup for the pH sensor
 unsigned long int avgValue;  //Store the average value of the sensor feedback
@@ -18,13 +38,9 @@ float phValue = 0;
 
 // Variables Setup for the Temp sensor
 OneWire ds = OneWire(D2);
-unsigned long lastUpdate = 0;    
+unsigned long lastUpdate = 0;
 float Temp = -100;
 char resultstr[256];
-
-
-int measure = 0; //Unknown Variable
-
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -41,14 +57,13 @@ Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the senso
 		{
 			// You can change the gain on the fly, to adapt to brighter/dimmer light situations
 			tsl.setGain(TSL2591_GAIN_LOW);    // 1x gain (bright light) used for the laser
-			
 				//tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
 				//tsl.setGain(TSL2591_GAIN_HIGH);   // 428x gain
 
 			// Changing the integration time gives you a longer time over which to sense light
 			// longer timelines are slower, but are good in very low light situtations!
 			tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light) used for the laser
-			
+
 				// tsl.setTiming(TSL2591_INTEGRATIONTIME_200MS);
 				// tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
 				// tsl.setTiming(TSL2591_INTEGRATIONTIME_400MS);
@@ -57,20 +72,29 @@ Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the senso
 
 			tsl2591Gain_t gain = tsl.getGain();	//sets the gain
 		}
-		
-		double cTemp = 0.0, fTemp = 0.0, humidity = 0.0, tLux = 0.0;
 
+		double cTemp = 0.0, fTemp = 0.0, humidity = 0.0, tLux = 0.0;
+		double Conc = 89.0;
+
+
+// LED Cycling Setup
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE);
+int i;
+int j;
+int LIGHT_CYCLE_TIME = 100000; //Time in ms for the lights to function
+int LT = (LIGHT_CYCLE_TIME)/1000; //Time in ms for the lights divided by the total delay in the Lightfunction() below
+void spin(int R, int G, int B);
 
 void setup()
 {
     Particle.variable("result", resultstr, STRING);
     Serial.begin(9600);
 
- 
+
     //pinMode(A0, INPUT); // setup A0 as analog input
-    
+
     // Setup to Use LCD Screen
-    lcd.init();                      // initialize the lcd 
+    lcd.init();                      // initialize the lcd
     lcd.init();
     // Print a message to the LCD.
     lcd.backlight();
@@ -80,29 +104,33 @@ void setup()
     lcd.print("Your Data");
     lcd.setCursor(3,2);
     lcd.print("Now...");
-    
-    
+
+
     pinMode(LaserLED,OUTPUT);  //Declares D7 as being used as the variable LaserLED and turns on
-			
-			// Initialise I2C communication as MASTER 
+
+			// Initialise I2C communication as MASTER
 			Wire.begin();
 			Serial.begin(9600); // Initialise serial communication, set baud rate = 9600
-			
+
 			/* Configure the sensor */
 			configureSensor();
-					
+
 			// Set Particle variables
 			Particle.variable("i2cdevice", "SHT31");
 			Particle.variable("lux", tLux);
 
 			// Start I2C Transmission
 			Wire.beginTransmission(Addr);
-			// Send 16-bit command byte          
+			// Send 16-bit command byte
 			Wire.write(0x2C);
 			Wire.write(0x06);
 			// Stop I2C transmission
 			Wire.endTransmission();
 			delay(300);
+
+			strip.begin();
+            strip.show();
+
 }
 
 
@@ -125,14 +153,12 @@ void setup()
 		double length_cal = 1.24; //Length that the light has to travel in cm ******SET THIS AS A CONSTANT
 		double per_T = tLux/eLux;  //Percentage of transmittance calculated
 		double Abs = 2 - log10(per_T);  //Absorbtion of light
-		//double Conc = Abs/(length_cal);  //Biomass density of sample (mg/cm3)
-		double Conc = 95/95; // for testing
-		
+		Conc = Abs/(length_cal);  //Biomass density of sample (mg/cm3)
+		//Conc = 95/95; // for testing
+
 		Particle.variable("Conc", Conc);    //sets concentration as a particle variable
-		
-		//double Conc = 95/95;
-        Particle.publish("per_T: ", String(per_T, 8));
-		
+        //Particle.publish("per_T: ", String(per_T, 2));
+
 		//publish the variables
 		Particle.publish("Vis: ", String(vis, 2));
 		delay(5000);
@@ -141,21 +167,22 @@ void setup()
 		Particle.publish("Concentration: ", String(Conc, 2));
 		delay(5000);
     }
-    
-    
+
+
 
 void loop()
 {
-    LoopTest();
     SensorPack();
+    Lightfunction();
+    delay(100);
 
 }
     void PHfunction()
     {
     phValue = 0;
-    
+
     for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
-  { 
+  {
     buf[i]=analogRead(SensorPin);
     delay(10);
   }
@@ -179,7 +206,7 @@ void loop()
   //phValue=(((float)avgValue*3.3)/3200)/6;
   //ADDITIONAL NOTE: I used these settings and then adjusted the rheostat on the circuit board to get the calibration perfect.
   phValue=2.67*phValue;                      //convert the millivolt into pH value
-    
+
 }
 
 void temperaturefunction()
@@ -190,14 +217,14 @@ void temperaturefunction()
     byte data[12];
     byte addr[8];
     float celsius, fahrenheit;
-    
+
     if ( !ds.search(addr)) {
         ds.reset_search();
         delay(250);
         return;
     }
 
-///*    
+///*
     // Use to determine the addressess of the sensors connected to the Photon
     Serial.println();
     Serial.println("ROM =");
@@ -212,30 +239,30 @@ void temperaturefunction()
     ds.select(addr);
     ds.write(0x44,0);
     delay(1000);
-    
+
     present = ds.reset();
     ds.select(addr);
     ds.write(0xB8,0);
     ds.write(0x00,0);
-    
+
     present = ds.reset();
     ds.select(addr);
     ds.write(0xBE,0);
-    
+
     for ( i = 0; i < 9; i++){
         data[i] = ds.read();
     }
 
     int16_t raw = (data[1] << 8) | data[0];
-    byte cfg = (data[4] & 0x60);    
+    byte cfg = (data[4] & 0x60);
     if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
     if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
     if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
     // default is 12 bit resolution, 750 ms conversion time
     celsius = (float)raw * 0.0625;
     fahrenheit = celsius * 1.8 + 32;
-  
-    //if (addr[7] == 0x40) 
+
+    //if (addr[7] == 0x40)
     Temp = celsius;
 
     delay(1000); // wait for a second
@@ -261,6 +288,9 @@ void LCDfunction()
     lcd.print(phValue);
     delay(1000);
     lcd.setCursor(1,3);
+    lcd.print("Conc = ");
+    lcd.setCursor(8,3);
+    lcd.print(Conc);
 }
 
 void ODSfunction()
@@ -271,6 +301,7 @@ void ODSfunction()
 
 void SensorPack()
 {
+    Particle.publish("Updated to Grand Unified Code V9!");
     PHfunction();
     delay(1000);
     temperaturefunction();
@@ -279,10 +310,22 @@ void SensorPack()
     Particle.publish("Temp", String(Temp, 2));
     Particle.publish("phValue", String(phValue, 2));
     LCDfunction();
-    delay(100000);    
 }
 
-void LoopTest()
-{
-   Particle.publish("Updated to Grand Unified Code V8!");
+void spin(int R, int G, int B) {
+    for(i=0; i < PIXEL_COUNT; i++) {
+        strip.setPixelColor(i, R,G,B);
+    }
+    strip.show();
+}
+
+void Lightfunction(){
+    for(j=0; j < LT; j++) {
+        spin(PURPLE);
+        delay(500);  //Change the LT variable above if these delays are changed to more accurate control the amount of the time the lights are cycling
+        //Particle.publish("The Lights are On");  //Code for testing without the physical LEDs connected
+        spin(OFF);
+        //Particle.publish("The Lights are Off"); //Code for testing without the physical LEDs connected
+        delay(500); //Change the LT variable above if these delays are changed to more accurate control the amount of the time the lights are cycling
+    }
 }
